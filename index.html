@@ -2,863 +2,395 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Platform Ujian Online</title>
-    <!-- Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sistem Ujian Online Terproteksi</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Alpine.js untuk State Management -->
+    <!-- Alpine.js CDN -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <!-- SheetJS (xlsx) untuk Export Excel -->
+    <!-- SheetJS (XLSX) untuk Ekspor ke Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Font Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col" x-data="examApp()" x-init="initData()">
+<body class="bg-slate-100 font-sans min-h-screen text-slate-800" x-data="appData()" x-init="initApp()">
 
-    <!-- Header Navigation Bar -->
-    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-indigo-800 rounded-lg">
-                    <i class="fa-solid fa-graduation-cap text-xl text-indigo-200"></i>
-                </div>
-                <span class="font-bold text-lg sm:text-xl tracking-tight">EduTest Online</span>
-            </div>
-
-            <!-- Role Switcher -->
-            <div class="flex items-center bg-indigo-900/60 p-1 rounded-xl border border-indigo-500/30">
-                <button 
-                    @click="switchRole('siswa')"
-                    :class="role === 'siswa' ? 'bg-white text-indigo-900 shadow-sm' : 'text-indigo-200 hover:text-white'"
-                    class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-2">
-                    <i class="fa-solid fa-user-large"></i>
-                    <span>Mode Siswa</span>
+    <!-- HEADER / NAVIGATION -->
+    <header class="bg-indigo-600 text-white p-4 shadow-md sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-lg md:text-xl font-bold tracking-wide">Ujian Online</h1>
+            <div class="space-x-2">
+                <button x-show="view === 'login'" @click="openAdminModal()" class="bg-indigo-700 hover:bg-indigo-800 text-xs md:text-sm px-3 py-1.5 rounded transition font-medium">
+                    Portal Guru 🔒
                 </button>
-                <button 
-                    @click="switchRole('guru')"
-                    :class="role === 'guru' ? 'bg-white text-indigo-900 shadow-sm' : 'text-indigo-200 hover:text-white'"
-                    class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-2">
-                    <i class="fa-solid fa-user-tie"></i>
-                    <span>Portal Guru</span>
+                <button x-show="view === 'admin'" @click="view = 'login'" class="bg-slate-700 hover:bg-slate-800 text-xs md:text-sm px-3 py-1.5 rounded transition font-medium">
+                    Keluar Admin
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- Main Content Area -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+    <main class="max-w-4xl mx-auto p-4 md:p-6">
 
-        <!-- ========================================== -->
-        <!-- SISWA VIEW -->
-        <!-- ========================================== -->
-        <template x-if="role === 'siswa'">
-            <div>
-                <!-- STEP 1: FORM IDENTITAS SISWA -->
-                <template x-if="studentStep === 'identity'">
-                    <div class="max-w-md mx-auto my-8 bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-100">
-                        <div class="text-center mb-6">
-                            <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                                <i class="fa-solid fa-clipboard-user"></i>
-                            </div>
-                            <h2 class="text-2xl font-bold text-slate-800">Masuk Ujian</h2>
-                            <p class="text-slate-500 text-sm mt-1">Lengkapi data diri Anda sebelum memulai ujian.</p>
-                        </div>
-
-                        <form @submit.prevent="startExam()" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Nama Lengkap</label>
-                                <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                        <i class="fa-solid fa-user"></i>
-                                    </span>
-                                    <input type="text" x-model="studentForm.nama" required placeholder="Contoh: Ahmad Subagja" 
-                                           class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none text-sm transition">
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Kelas</label>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                            <i class="fa-solid fa-school"></i>
-                                        </span>
-                                        <input type="text" x-model="studentForm.kelas" required placeholder="XII IPA 1" 
-                                               class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none text-sm transition">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">No Absen</label>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                            <i class="fa-solid fa-list-ol"></i>
-                                        </span>
-                                        <input type="number" x-model="studentForm.noAbsen" required placeholder="05" 
-                                               class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none text-sm transition">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="pt-2">
-                                <button type="submit" 
-                                        class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md hover:shadow-indigo-200 transition-all duration-200 flex items-center justify-center gap-2">
-                                    <span>Mulai Ujian Now</span>
-                                    <i class="fa-solid fa-arrow-right"></i>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </template>
-
-                <!-- STEP 2: TAMPILAN SOAL UJIAN -->
-                <template x-if="studentStep === 'exam'">
-                    <div class="space-y-6">
-                        <!-- Exam Info Bar -->
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
-                            <div class="flex items-center space-x-4">
-                                <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                                    <span x-text="studentForm.nama.charAt(0).toUpperCase()"></span>
-                                </div>
-                                <div>
-                                    <h3 class="font-semibold text-slate-800 leading-tight" x-text="studentForm.nama"></h3>
-                                    <p class="text-xs text-slate-500">Kelas: <span x-text="studentForm.kelas"></span> | Absen: <span x-text="studentForm.noAbsen"></span></p>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-6">
-                                <!-- Question Counter -->
-                                <div class="text-right">
-                                    <span class="text-xs text-slate-400 font-medium block">Progres</span>
-                                    <span class="text-sm font-semibold text-slate-700" x-text="`${currentQuestionIndex + 1} dari ${questions.length} Soal`"></span>
-                                </div>
-                                <!-- Timer -->
-                                <div class="bg-amber-50 border border-amber-200 px-4 py-1.5 rounded-lg text-amber-700 flex items-center gap-2">
-                                    <i class="fa-regular fa-clock animate-pulse"></i>
-                                    <span class="font-mono font-bold text-sm" x-text="formatTime(timerSeconds)"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                            <!-- Question Content Area (3 Cols) -->
-                            <div class="lg:col-span-3 space-y-6">
-                                <template x-if="questions.length > 0">
-                                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 min-h-[400px] flex flex-col justify-between">
-                                        <div>
-                                            <!-- Question Header -->
-                                            <div class="flex items-center justify-between border-b pb-4 mb-6">
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
-                                                    Soal No. <span x-text="currentQuestionIndex + 1" class="ml-1"></span>
-                                                </span>
-                                                <span class="text-xs font-medium text-slate-400 uppercase tracking-wider" x-text="currentQuestion.type === 'pg' ? 'Pilihan Ganda' : 'Essay'"></span>
-                                            </div>
-
-                                            <!-- Question Text -->
-                                            <p class="text-slate-800 font-medium text-base sm:text-lg mb-6 leading-relaxed" x-text="currentQuestion.text"></p>
-
-                                            <!-- Multiple Choice Options -->
-                                            <template x-if="currentQuestion.type === 'pg'">
-                                                <div class="space-y-3">
-                                                    <template x-for="(opt, idx) in currentQuestion.options" :key="idx">
-                                                        <label 
-                                                            :class="studentAnswers[currentQuestion.id] === idx ? 'border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-500/20' : 'border-slate-200 hover:border-slate-300 bg-white'"
-                                                            class="flex items-start p-4 rounded-xl border cursor-pointer transition-all duration-200">
-                                                            <input type="radio" 
-                                                                   :name="'question-' + currentQuestion.id" 
-                                                                   :value="idx"
-                                                                   x-model="studentAnswers[currentQuestion.id]"
-                                                                   class="mt-1 text-indigo-600 focus:ring-indigo-500 h-4 w-4">
-                                                            <span class="ml-3 font-semibold text-slate-500 mr-2" x-text="String.fromCharCode(65 + idx) + '.'"></span>
-                                                            <span class="text-slate-700 text-sm sm:text-base" x-text="opt"></span>
-                                                        </label>
-                                                    </template>
-                                                </div>
-                                            </template>
-
-                                            <!-- Essay Option -->
-                                            <template x-if="currentQuestion.type === 'essay'">
-                                                <div>
-                                                    <textarea 
-                                                        x-model="studentAnswers[currentQuestion.id]"
-                                                        rows="5" 
-                                                        placeholder="Ketik jawaban Anda di sini secara rinci..." 
-                                                        class="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-700 text-sm sm:text-base outline-none resize-none transition">
-                                                    </textarea>
-                                                </div>
-                                            </template>
-                                        </div>
-
-                                        <!-- Question Action Buttons -->
-                                        <div class="flex items-center justify-between pt-6 border-t mt-8">
-                                            <button 
-                                                @click="prevQuestion()" 
-                                                :disabled="currentQuestionIndex === 0"
-                                                :class="currentQuestionIndex === 0 ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'"
-                                                class="px-5 py-2.5 rounded-xl font-medium text-sm transition flex items-center gap-2">
-                                                <i class="fa-solid fa-arrow-left"></i>
-                                                <span>Sebelumnya</span>
-                                            </button>
-
-                                            <template x-if="currentQuestionIndex < questions.length - 1">
-                                                <button 
-                                                    @click="nextQuestion()" 
-                                                    class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl transition flex items-center gap-2 shadow-md">
-                                                    <span>Berikutnya</span>
-                                                    <i class="fa-solid fa-arrow-right"></i>
-                                                </button>
-                                            </template>
-
-                                            <template x-if="currentQuestionIndex === questions.length - 1">
-                                                <button 
-                                                    @click="confirmSubmitExam()" 
-                                                    class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-xl transition flex items-center gap-2 shadow-md">
-                                                    <i class="fa-solid fa-paper-plane"></i>
-                                                    <span>Selesaikan Ujian</span>
-                                                </button>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-
-                            <!-- Navigation Sidebar (1 Col) -->
-                            <div class="lg:col-span-1">
-                                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sticky top-24">
-                                    <h4 class="font-semibold text-slate-800 text-sm mb-4 flex items-center gap-2">
-                                        <i class="fa-solid fa-table-cells text-indigo-600"></i>
-                                        <span>Navigasi Soal</span>
-                                    </h4>
-
-                                    <div class="grid grid-cols-5 gap-2">
-                                        <template x-for="(q, index) in questions" :key="q.id">
-                                            <button 
-                                                @click="goToQuestion(index)"
-                                                :class="{
-                                                    'ring-2 ring-indigo-600 font-bold': currentQuestionIndex === index,
-                                                    'bg-emerald-500 text-white border-emerald-600': isQuestionAnswered(q.id) && currentQuestionIndex !== index,
-                                                    'bg-slate-100 text-slate-600 hover:bg-slate-200': !isQuestionAnswered(q.id) && currentQuestionIndex !== index
-                                                }"
-                                                class="h-10 rounded-lg text-xs font-medium flex items-center justify-center transition border">
-                                                <span x-text="index + 1"></span>
-                                            </button>
-                                        </template>
-                                    </div>
-
-                                    <div class="mt-6 pt-4 border-t space-y-2 text-xs text-slate-500">
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
-                                            <span>Sudah dijawab</span>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-3 h-3 rounded-full bg-slate-200 inline-block"></span>
-                                            <span>Belum dijawab</span>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-3 h-3 rounded-full ring-2 ring-indigo-600 inline-block"></span>
-                                            <span>Sedang dibuka</span>
-                                        </div>
-                                    </div>
-
-                                    <button 
-                                        @click="confirmSubmitExam()"
-                                        class="w-full mt-6 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold rounded-xl text-xs border border-emerald-200 transition">
-                                        Kirim Jawaban Ujian
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-
-                <!-- STEP 3: HALAMAN SELESAI UJIAN -->
-                <template x-if="studentStep === 'completed'">
-                    <div class="max-w-md mx-auto my-12 bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center">
-                        <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
-                            <i class="fa-solid fa-circle-check"></i>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-800">Ujian Selesai!</h2>
-                        <p class="text-slate-500 text-sm mt-2">Terima kasih, <strong x-text="studentForm.nama"></strong>. Jawaban Anda telah tersimpan secara otomatis ke dalam sistem database guru.</p>
-
-                        <div class="my-6 p-4 bg-slate-50 rounded-xl text-left space-y-2 text-xs sm:text-sm text-slate-600 border">
-                            <div class="flex justify-between">
-                                <span>Kelas / Absen:</span>
-                                <span class="font-semibold text-slate-800" x-text="`${studentForm.kelas} / ${studentForm.noAbsen}`"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>Skor Pilihan Ganda:</span>
-                                <span class="font-bold text-emerald-600" x-text="`${lastSubmissionScore.scorePG} / 100`"></span>
-                            </div>
-                        </div>
-
-                        <button 
-                            @click="resetStudentForm()" 
-                            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm transition">
-                            Kembali ke Halaman Depan
+        <!-- MODAL ACCESS PIN GURU -->
+        <div x-show="showAdminModal" x-transition class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border border-slate-200">
+                <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">Akses Portal Guru</h3>
+                <p class="text-xs text-slate-500 mb-4">Masukkan PIN Rahasia Guru untuk melanjutkan.</p>
+                
+                <form @submit.prevent="verifyAdminPIN()">
+                    <input type="password" x-model="inputPin" placeholder="PIN Rahasia" required class="w-full px-4 py-2.5 text-center text-lg font-bold tracking-widest rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none mb-3">
+                    <p x-show="pinError" class="text-xs text-rose-600 mb-3 font-semibold">PIN Salah! Silakan coba lagi.</p>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" @click="showAdminModal = false; inputPin = ''; pinError = false;" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-lg text-sm transition">
+                            Batal
+                        </button>
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm transition">
+                            Masuk
                         </button>
                     </div>
-                </template>
+                </form>
             </div>
-        </template>
+        </div>
 
-        <!-- ========================================== -->
-        <!-- GURU / ADMIN PANEL VIEW -->
-        <!-- ========================================== -->
-        <template x-if="role === 'guru'">
-            <div class="space-y-6">
-                <!-- Top Tabs Navigation -->
-                <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap gap-2">
-                    <button 
-                        @click="adminTab = 'results'"
-                        :class="adminTab === 'results' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'"
-                        class="px-5 py-2.5 rounded-xl font-medium text-sm transition flex items-center gap-2">
-                        <i class="fa-solid fa-square-poll-vertical"></i>
-                        <span>Hasil & Rekap Jawaban Ujian</span>
-                        <span class="ml-1 px-2 py-0.5 rounded-full text-xs" :class="adminTab === 'results' ? 'bg-indigo-800 text-white' : 'bg-slate-200 text-slate-700'" x-text="submissions.length"></span>
-                    </button>
+        <!-- 1. HALAMAN LOGIN SISWA -->
+        <div x-show="view === 'login'" class="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-xl mt-4 border border-slate-200">
+            <div class="text-center mb-6">
+                <div class="inline-block p-3 bg-indigo-100 text-indigo-600 rounded-full mb-2">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0112 20.055a11.952 11.952 0 01-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">Masuk Ujian</h2>
+                <p class="text-xs text-slate-500 mt-1">Isi identitas Anda dengan benar untuk memulai.</p>
+            </div>
 
-                    <button 
-                        @click="adminTab = 'questions'"
-                        :class="adminTab === 'questions' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'"
-                        class="px-5 py-2.5 rounded-xl font-medium text-sm transition flex items-center gap-2">
-                        <i class="fa-solid fa-file-pen"></i>
-                        <span>Bank Soal Ujian</span>
-                        <span class="ml-1 px-2 py-0.5 rounded-full text-xs" :class="adminTab === 'questions' ? 'bg-indigo-800 text-white' : 'bg-slate-200 text-slate-700'" x-text="questions.length"></span>
-                    </button>
+            <form @submit.prevent="startExam()" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Lengkap</label>
+                    <input type="text" x-model="student.name" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition" placeholder="Contoh: Budi Santoso">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Kelas</label>
+                        <input type="text" x-model="student.class" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition" placeholder="X-IPA 1">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">No Absen</label>
+                        <input type="number" x-model="student.absent" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition" placeholder="05">
+                    </div>
                 </div>
 
-                <!-- TAB 1: HASIL UJIAN SISWA -->
-                <template x-if="adminTab === 'results'">
-                    <div class="space-y-4">
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
-                            <div>
-                                <h3 class="text-lg font-bold text-slate-800">Rekapitulasi Hasil Ujian Siswa</h3>
-                                <p class="text-xs text-slate-500">Semua jawaban siswa tersimpan otomatis. Unduh sebagai file Excel kapan saja.</p>
-                            </div>
-                            <button 
-                                @click="exportToExcel()"
-                                :disabled="submissions.length === 0"
-                                :class="submissions.length === 0 ? 'opacity-50 cursor-not-allowed bg-emerald-300' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100 hover:shadow-lg'"
-                                class="px-5 py-2.5 text-white font-semibold text-sm rounded-xl transition flex items-center gap-2 shadow-md">
-                                <i class="fa-solid fa-file-excel text-lg"></i>
-                                <span>Download Hasil Ujian (Excel)</span>
-                            </button>
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 space-y-1">
+                    <p class="font-semibold">⚠️ Ketentuan Keamanan Ujian:</p>
+                    <ul class="list-disc list-inside space-y-0.5">
+                        <li>Ujian berjalan dalam mode <b>Layar Penuh</b>.</li>
+                        <li>Dilarang berpindah tab/aplikasi lain.</li>
+                        <li>Pelanggaran ke-3 akan mengumpulkan jawaban otomatis!</li>
+                    </ul>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-indigo-500/30 transition transform active:scale-95">
+                    Mulai Ujian
+                </button>
+            </form>
+        </div>
+
+        <!-- 2. HALAMAN SOAL UJIAN SISWA -->
+        <div x-show="view === 'exam'" class="space-y-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-2">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base md:text-lg" x-text="student.name"></h3>
+                    <p class="text-xs text-slate-500" x-text="'Kelas: ' + student.class + ' | No. Absen: ' + student.absent"></p>
+                </div>
+                <div>
+                    <span class="text-xs px-3 py-1.5 rounded-full font-bold" 
+                          :class="violations === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'">
+                        Pelanggaran: <span x-text="violations"></span>/3
+                    </span>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <template x-for="(q, index) in questions" :key="index">
+                    <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="flex items-start space-x-3 mb-4">
+                            <span class="bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-lg text-sm" x-text="index + 1"></span>
+                            <p class="font-medium text-slate-800 text-sm md:text-base pt-0.5" x-text="q.text"></p>
                         </div>
-
-                        <!-- Data Table -->
-                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left text-sm text-slate-600">
-                                    <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider border-b">
-                                        <tr>
-                                            <th class="px-6 py-4">Waktu</th>
-                                            <th class="px-6 py-4">Nama Siswa</th>
-                                            <th class="px-6 py-4">Kelas</th>
-                                            <th class="px-6 py-4">Absen</th>
-                                            <th class="px-6 py-4">Skor PG</th>
-                                            <th class="px-6 py-4 text-center">Detail Jawaban</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-100">
-                                        <template x-for="(sub, idx) in submissions" :key="idx">
-                                            <tr class="hover:bg-slate-50/80 transition">
-                                                <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-400" x-text="sub.submittedAt"></td>
-                                                <td class="px-6 py-4 font-semibold text-slate-800" x-text="sub.nama"></td>
-                                                <td class="px-6 py-4" x-text="sub.kelas"></td>
-                                                <td class="px-6 py-4" x-text="sub.noAbsen"></td>
-                                                <td class="px-6 py-4">
-                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800" x-text="sub.scorePG + ' / 100'"></span>
-                                                </td>
-                                                <td class="px-6 py-4 text-center">
-                                                    <button @click="viewSubmissionDetail(sub)" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold underline">
-                                                        Lihat Detail
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        </template>
-
-                                        <template x-if="submissions.length === 0">
-                                            <tr>
-                                                <td colspan="6" class="px-6 py-12 text-center text-slate-400">
-                                                    <i class="fa-solid fa-folder-open text-3xl mb-2 block"></i>
-                                                    Belum ada data siswa yang mengirimkan jawaban.
-                                                </td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-
-                <!-- TAB 2: KELOLA BANK SOAL -->
-                <template x-if="adminTab === 'questions'">
-                    <div class="space-y-6">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-lg font-bold text-slate-800">Daftar Soal Ujian</h3>
-                            <button 
-                                @click="openQuestionModal()"
-                                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl transition flex items-center gap-2 shadow-sm">
-                                <i class="fa-solid fa-plus"></i>
-                                <span>Tambah Soal Baru</span>
-                            </button>
-                        </div>
-
-                        <!-- Question List -->
-                        <div class="space-y-4">
-                            <template x-for="(q, idx) in questions" :key="q.id">
-                                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-3">
-                                    <div class="flex justify-between items-start gap-4">
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center" x-text="idx + 1"></span>
-                                            <span class="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600" x-text="q.type === 'pg' ? 'Pilihan Ganda' : 'Essay'"></span>
-                                        </div>
-                                        <div class="flex items-center space-x-2">
-                                            <button @click="editQuestion(q)" class="p-1.5 text-slate-400 hover:text-indigo-600 transition"><i class="fa-solid fa-pen-to-square"></i></button>
-                                            <button @click="deleteQuestion(q.id)" class="p-1.5 text-slate-400 hover:text-rose-600 transition"><i class="fa-solid fa-trash-can"></i></button>
-                                        </div>
-                                    </div>
-
-                                    <p class="font-medium text-slate-800" x-text="q.text"></p>
-
-                                    <!-- Render Options if PG -->
-                                    <template x-if="q.type === 'pg'">
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                                            <template x-for="(opt, oIdx) in q.options" :key="oIdx">
-                                                <div 
-                                                    :class="q.correct === oIdx ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-medium' : 'bg-slate-50 border-slate-200 text-slate-600'"
-                                                    class="p-2.5 rounded-lg border text-xs flex items-center justify-between">
-                                                    <span x-text="`${String.fromCharCode(65 + oIdx)}. ${opt}`"></span>
-                                                    <template x-if="q.correct === oIdx">
-                                                        <i class="fa-solid fa-check text-emerald-600"></i>
-                                                    </template>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </template>
-                                </div>
-                            </template>
-
-                            <template x-if="questions.length === 0">
-                                <div class="bg-white p-12 rounded-2xl border border-slate-200 text-center text-slate-400">
-                                    <i class="fa-solid fa-clipboard-question text-4xl mb-3 block text-slate-300"></i>
-                                    <p>Belum ada soal ujian. Klik tombol di atas untuk menambah soal baru.</p>
-                                </div>
+                        <div class="space-y-2 pl-0 md:pl-10">
+                            <template x-for="(opt, oIndex) in q.options" :key="oIndex">
+                                <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-indigo-50/50 cursor-pointer transition">
+                                    <input type="radio" :name="'question-' + index" :value="oIndex" x-model="studentAnswers[index]" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
+                                    <span class="text-xs md:text-sm text-slate-700" x-text="opt"></span>
+                                </label>
                             </template>
                         </div>
                     </div>
                 </template>
             </div>
-        </template>
+
+            <div class="pt-4 pb-12 text-center">
+                <button @click="submitExam(false)" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg hover:shadow-emerald-500/30 transition transform active:scale-95">
+                    Kirim Jawaban
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. HALAMAN DASHBOARD GURU -->
+        <div x-show="view === 'admin'" class="space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">Dashboard Guru</h2>
+                    <p class="text-xs text-slate-500">Buat soal dan unduh rekapitulasi nilai siswa.</p>
+                </div>
+                <button @click="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-2.5 rounded-lg shadow transition flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Download Hasil (.XLSX)</span>
+                </button>
+            </div>
+
+            <!-- Form Tambah Soal -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="font-bold text-slate-800 mb-4 border-b pb-2">Tambah Soal Baru</h3>
+                <form @submit.prevent="addQuestion()" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Pertanyaan</label>
+                        <textarea x-model="newQ.text" required class="w-full p-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" rows="2" placeholder="Tuliskan pertanyaan..."></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <template x-for="(opt, idx) in newQ.options" :key="idx">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1" x-text="'Pilihan ' + String.fromCharCode(65 + idx)"></label>
+                                <input type="text" x-model="newQ.options[idx]" required class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Kunci Jawaban</label>
+                            <select x-model.number="newQ.correct" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <option value="0">Pilihan A</option>
+                                <option value="1">Pilihan B</option>
+                                <option value="2">Pilihan C</option>
+                                <option value="3">Pilihan D</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition text-sm">
+                                Simpan Soal
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Daftar Soal -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="font-bold text-slate-800 mb-4 border-b pb-2">Daftar Soal (<span x-text="questions.length"></span>)</h3>
+                <div class="space-y-4">
+                    <template x-for="(q, index) in questions" :key="index">
+                        <div class="p-4 border border-slate-200 rounded-lg relative bg-slate-50">
+                            <button @click="deleteQuestion(index)" class="absolute top-3 right-3 text-rose-500 hover:text-rose-700 text-xs font-semibold">
+                                Hapus
+                            </button>
+                            <p class="font-semibold text-sm text-slate-800 pr-12" x-text="(index + 1) + '. ' + q.text"></p>
+                            <div class="grid grid-cols-2 gap-2 mt-2 text-xs">
+                                <template x-for="(opt, oIdx) in q.options" :key="oIdx">
+                                    <div :class="oIdx === q.correct ? 'font-bold text-emerald-600' : 'text-slate-600'" x-text="String.fromCharCode(65 + oIdx) + '. ' + opt"></div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
 
     </main>
 
-    <!-- MODAL: TAMBAH / EDIT SOAL -->
-    <div x-show="showQuestionModal" 
-         class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-         x-cloak x-transition>
-        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-100">
-            <div class="p-6 border-b flex justify-between items-center">
-                <h3 class="font-bold text-lg text-slate-800" x-text="editingQuestionId ? 'Edit Soal' : 'Tambah Soal Baru'"></h3>
-                <button @click="showQuestionModal = false" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-
-            <form @submit.prevent="saveQuestion()" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Tipe Soal</label>
-                    <select x-model="questionForm.type" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
-                        <option value="pg">Pilihan Ganda (PG)</option>
-                        <option value="essay">Essay / Isian Singkat</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Pertanyaan / Soal</label>
-                    <textarea x-model="questionForm.text" required rows="3" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" placeholder="Ketik pertanyaan..."></textarea>
-                </div>
-
-                <!-- Input Opsi jika PG -->
-                <template x-if="questionForm.type === 'pg'">
-                    <div class="space-y-3 pt-2">
-                        <label class="block text-xs font-semibold uppercase text-slate-600">Pilihan Jawaban & Jawaban Benar</label>
-                        <template x-for="(opt, idx) in questionForm.options" :key="idx">
-                            <div class="flex items-center space-x-2">
-                                <input type="radio" :name="'correctOpt'" :value="idx" x-model.number="questionForm.correct" class="text-indigo-600 focus:ring-indigo-500">
-                                <span class="text-xs font-bold text-slate-500 w-4" x-text="String.fromCharCode(65 + idx)"></span>
-                                <input type="text" x-model="questionForm.options[idx]" required class="flex-1 p-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" :placeholder="'Opsi ' + String.fromCharCode(65 + idx)">
-                            </div>
-                        </template>
-                        <p class="text-xs text-slate-400 italic">* Pilih salah satu tombol radio untuk menandai jawaban yang benar.</p>
-                    </div>
-                </template>
-
-                <div class="pt-4 flex justify-end space-x-2">
-                    <button type="button" @click="showQuestionModal = false" class="px-4 py-2 bg-slate-100 text-slate-600 font-medium rounded-lg text-sm hover:bg-slate-200">Batal</button>
-                    <button type="submit" class="px-5 py-2 bg-indigo-600 text-white font-medium rounded-lg text-sm hover:bg-indigo-700 shadow-sm">Simpan Soal</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL: DETAIL JAWABAN SISWA -->
-    <div x-show="showDetailModal" 
-         class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-         x-cloak x-transition>
-        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-slate-100 max-h-[90vh] flex flex-col">
-            <div class="p-6 border-b flex justify-between items-center bg-slate-50">
-                <div>
-                    <h3 class="font-bold text-lg text-slate-800" x-text="selectedSubmission?.nama"></h3>
-                    <p class="text-xs text-slate-500" x-text="`Kelas: ${selectedSubmission?.kelas} | Absen: ${selectedSubmission?.noAbsen}`"></p>
-                </div>
-                <button @click="showDetailModal = false" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-
-            <div class="p-6 overflow-y-auto flex-1 space-y-4">
-                <template x-for="(q, idx) in questions" :key="q.id">
-                    <div class="p-4 rounded-xl border border-slate-200 space-y-2">
-                        <div class="flex items-center justify-between text-xs font-semibold text-slate-500">
-                            <span x-text="`Soal #${idx + 1} (${q.type.toUpperCase()})`"></span>
-                            <template x-if="q.type === 'pg'">
-                                <span :class="selectedSubmission?.answers[q.id] === q.correct ? 'text-emerald-600' : 'text-rose-600'">
-                                    <i :class="selectedSubmission?.answers[q.id] === q.correct ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'"></i>
-                                    <span x-text="selectedSubmission?.answers[q.id] === q.correct ? ' Benar' : ' Salah'"></span>
-                                </span>
-                            </template>
-                        </div>
-                        <p class="text-sm font-medium text-slate-800" x-text="q.text"></p>
-                        
-                        <div class="text-xs p-3 rounded-lg bg-slate-50 border text-slate-700">
-                            <strong>Jawaban Siswa: </strong>
-                            <template x-if="q.type === 'pg'">
-                                <span x-text="selectedSubmission?.answers[q.id] !== undefined ? `${String.fromCharCode(65 + selectedSubmission?.answers[q.id])}. ${q.options[selectedSubmission?.answers[q.id]]}` : 'Tidak dijawab'"></span>
-                            </template>
-                            <template x-if="q.type === 'essay'">
-                                <span x-text="selectedSubmission?.answers[q.id] || 'Tidak dijawab'"></span>
-                            </template>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </div>
-    </div>
-
-    <!-- Custom JavaScript Logic -->
+    <!-- LOGIKA JAVASCRIPT & ALPINE.JS -->
     <script>
-        function examApp() {
+        function appData() {
             return {
-                role: 'siswa', // 'siswa' or 'guru'
-                studentStep: 'identity', // 'identity', 'exam', 'completed'
-                adminTab: 'results', // 'results', 'questions'
+                view: 'login',
+                showAdminModal: false,
+                adminPIN: "1234", // PIN Rahasia Guru (bisa diganti)
+                inputPin: "",
+                pinError: false,
 
-                // Form Data Siswa
-                studentForm: {
-                    nama: '',
-                    kelas: '',
-                    noAbsen: ''
-                },
-
-                // Exam Timer & State
-                timerSeconds: 1800, // 30 Menit
-                timerInterval: null,
-                currentQuestionIndex: 0,
+                violations: 0,
+                maxViolations: 3,
+                
+                student: { name: '', class: '', absent: '' },
                 studentAnswers: {},
-                lastSubmissionScore: { scorePG: 0 },
 
-                // Modals
-                showQuestionModal: false,
-                editingQuestionId: null,
-                questionForm: {
-                    type: 'pg',
-                    text: '',
-                    options: ['', '', '', ''],
-                    correct: 0
+                questions: [
+                    {
+                        text: "Ibu kota negara Indonesia adalah...",
+                        options: ["Bandung", "Surabaya", "Jakarta", "Ibu Kota Nusantara"],
+                        correct: 3
+                    }
+                ],
+
+                newQ: { text: '', options: ['', '', '', ''], correct: 0 },
+                results: [],
+
+                initApp() {
+                    const savedQ = localStorage.getItem('exam_questions');
+                    if (savedQ) this.questions = JSON.parse(savedQ);
+
+                    const savedR = localStorage.getItem('exam_results');
+                    if (savedR) this.results = JSON.parse(savedR);
+
+                    this.setupAntiCheat();
                 },
 
-                showDetailModal: false,
-                selectedSubmission: null,
+                openAdminModal() {
+                    this.inputPin = '';
+                    this.pinError = false;
+                    this.showAdminModal = true;
+                },
 
-                // Questions and Submissions Data (Saved in LocalStorage)
-                questions: [],
-                submissions: [],
-
-                initData() {
-                    // Default Sample Questions
-                    const defaultQuestions = [
-                        {
-                            id: 1,
-                            type: 'pg',
-                            text: 'Apa ibu kota dari negara Indonesia saat ini?',
-                            options: ['Surabaya', 'Jakarta', 'Bandung', 'Medan'],
-                            correct: 1
-                        },
-                        {
-                            id: 2,
-                            type: 'pg',
-                            text: 'Planet manakah yang dikenal sebagai Planet Merah?',
-                            options: ['Venus', 'Yupiter', 'Mars', 'Saturnus'],
-                            correct: 2
-                        },
-                        {
-                            id: 3,
-                            type: 'essay',
-                            text: 'Jelaskan secara singkat proses terjadinya fotosintesis pada tumbuhan hijau!',
-                            options: [],
-                            correct: null
-                        }
-                    ];
-
-                    const savedQuestions = localStorage.getItem('edu_questions');
-                    if (savedQuestions) {
-                        this.questions = JSON.parse(savedQuestions);
+                verifyAdminPIN() {
+                    if (this.inputPin === this.adminPIN) {
+                        this.showAdminModal = false;
+                        this.view = 'admin';
                     } else {
-                        this.questions = defaultQuestions;
-                        this.saveQuestionsToStorage();
-                    }
-
-                    const savedSubmissions = localStorage.getItem('edu_submissions');
-                    if (savedSubmissions) {
-                        this.submissions = JSON.parse(savedSubmissions);
+                        this.pinError = true;
                     }
                 },
 
-                switchRole(newRole) {
-                    if (this.studentStep === 'exam') {
-                        if (!confirm('Ujian sedang berlangsung. Yakin ingin keluar dari tampilan siswa?')) {
-                            return;
-                        }
-                        clearInterval(this.timerInterval);
-                        this.studentStep = 'identity';
-                    }
-                    this.role = newRole;
-                },
-
-                saveQuestionsToStorage() {
-                    localStorage.setItem('edu_questions', JSON.stringify(this.questions));
-                },
-
-                saveSubmissionsToStorage() {
-                    localStorage.setItem('edu_submissions', JSON.stringify(this.submissions));
-                },
-
-                // Student Exam Actions
                 startExam() {
+                    if (!this.student.name || !this.student.class || !this.student.absent) return;
                     if (this.questions.length === 0) {
-                        alert('Belum ada soal ujian yang dibuat oleh guru.');
+                        alert("Belum ada soal tersedia!");
                         return;
                     }
+
                     this.studentAnswers = {};
-                    this.currentQuestionIndex = 0;
-                    this.studentStep = 'exam';
-                    this.startTimer();
+                    this.violations = 0;
+                    this.view = 'exam';
+                    this.requestFullscreen();
                 },
 
-                startTimer() {
-                    this.timerSeconds = 1800;
-                    clearInterval(this.timerInterval);
-                    this.timerInterval = setInterval(() => {
-                        if (this.timerSeconds > 0) {
-                            this.timerSeconds--;
-                        } else {
-                            clearInterval(this.timerInterval);
-                            alert('Waktu ujian telah habis!');
-                            this.submitExam();
-                        }
-                    }, 1000);
-                },
-
-                formatTime(seconds) {
-                    const m = Math.floor(seconds / 60);
-                    const s = seconds % 60;
-                    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-                },
-
-                get currentQuestion() {
-                    return this.questions[this.currentQuestionIndex] || {};
-                },
-
-                nextQuestion() {
-                    if (this.currentQuestionIndex < this.questions.length - 1) {
-                        this.currentQuestionIndex++;
+                requestFullscreen() {
+                    const elem = document.documentElement;
+                    if (elem.requestFullscreen) {
+                        elem.requestFullscreen().catch(() => {});
+                    } else if (elem.webkitRequestFullscreen) {
+                        elem.webkitRequestFullscreen();
                     }
                 },
 
-                prevQuestion() {
-                    if (this.currentQuestionIndex > 0) {
-                        this.currentQuestionIndex--;
-                    }
-                },
-
-                goToQuestion(index) {
-                    this.currentQuestionIndex = index;
-                },
-
-                isQuestionAnswered(questionId) {
-                    const ans = this.studentAnswers[questionId];
-                    return ans !== undefined && ans !== '';
-                },
-
-                confirmSubmitExam() {
-                    if (confirm('Apakah Anda yakin ingin menyelesaikan dan mengirimkan jawaban ujian ini?')) {
-                        this.submitExam();
-                    }
-                },
-
-                submitExam() {
-                    clearInterval(this.timerInterval);
-
-                    // Calculate PG Score
-                    let pgTotal = 0;
-                    let pgCorrect = 0;
-
-                    this.questions.forEach(q => {
-                        if (q.type === 'pg') {
-                            pgTotal++;
-                            if (this.studentAnswers[q.id] === q.correct) {
-                                pgCorrect++;
-                            }
-                        }
+                setupAntiCheat() {
+                    document.addEventListener('contextmenu', e => {
+                        if (this.view === 'exam') e.preventDefault();
                     });
 
-                    const scorePG = pgTotal > 0 ? Math.round((pgCorrect / pgTotal) * 100) : 0;
-                    this.lastSubmissionScore = { scorePG };
-
-                    // Save Submission Data
-                    const now = new Date();
-                    const newSubmission = {
-                        id: Date.now(),
-                        nama: this.studentForm.nama,
-                        kelas: this.studentForm.kelas,
-                        noAbsen: this.studentForm.noAbsen,
-                        answers: { ...this.studentAnswers },
-                        scorePG: scorePG,
-                        submittedAt: now.toLocaleDateString('id-ID') + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-                    };
-
-                    this.submissions.push(newSubmission);
-                    this.saveSubmissionsToStorage();
-                    this.studentStep = 'completed';
-                },
-
-                resetStudentForm() {
-                    this.studentForm = { nama: '', kelas: '', noAbsen: '' };
-                    this.studentStep = 'identity';
-                },
-
-                // Question Builder Actions (Guru)
-                openQuestionModal() {
-                    this.editingQuestionId = null;
-                    this.questionForm = {
-                        type: 'pg',
-                        text: '',
-                        options: ['', '', '', ''],
-                        correct: 0
-                    };
-                    this.showQuestionModal = true;
-                },
-
-                editQuestion(q) {
-                    this.editingQuestionId = q.id;
-                    this.questionForm = {
-                        type: q.type,
-                        text: q.text,
-                        options: q.options ? [...q.options] : ['', '', '', ''],
-                        correct: q.correct !== undefined ? q.correct : 0
-                    };
-                    this.showQuestionModal = true;
-                },
-
-                saveQuestion() {
-                    if (this.editingQuestionId) {
-                        const idx = this.questions.findIndex(q => q.id === this.editingQuestionId);
-                        if (idx !== -1) {
-                            this.questions[idx] = {
-                                id: this.editingQuestionId,
-                                ...this.questionForm
-                            };
-                        }
-                    } else {
-                        const newQ = {
-                            id: Date.now(),
-                            ...this.questionForm
-                        };
-                        this.questions.push(newQ);
-                    }
-
-                    this.saveQuestionsToStorage();
-                    this.showQuestionModal = false;
-                },
-
-                deleteQuestion(id) {
-                    if (confirm('Yakin ingin menghapus soal ini?')) {
-                        this.questions = this.questions.filter(q => q.id !== id);
-                        this.saveQuestionsToStorage();
-                    }
-                },
-
-                viewSubmissionDetail(sub) {
-                    this.selectedSubmission = sub;
-                    this.showDetailModal = true;
-                },
-
-                // Excel Generation using SheetJS
-                exportToExcel() {
-                    if (this.submissions.length === 0) return;
-
-                    // Build dynamic headers
-                    const headers = ['No', 'Waktu Submit', 'Nama Lengkap', 'Kelas', 'No Absen', 'Nilai PG'];
-                    
-                    // Add columns for each question
-                    this.questions.forEach((q, idx) => {
-                        headers.push(`Soal ${idx + 1} (${q.type.toUpperCase()})`);
-                    });
-
-                    // Build rows
-                    const dataRows = this.submissions.map((sub, index) => {
-                        const row = [
-                            index + 1,
-                            sub.submittedAt,
-                            sub.nama,
-                            sub.kelas,
-                            sub.noAbsen,
-                            sub.scorePG
-                        ];
-
-                        // Answers
-                        this.questions.forEach(q => {
-                            const userAns = sub.answers[q.id];
-                            if (q.type === 'pg') {
-                                if (userAns !== undefined && userAns !== null) {
-                                    const optChar = String.fromCharCode(65 + userAns);
-                                    const optText = q.options[userAns] || '';
-                                    const isCorrect = userAns === q.correct ? '[BENAR]' : '[SALAH]';
-                                    row.push(`${optChar}. ${optText} ${isCorrect}`);
-                                } else {
-                                    row.push('Tidak Dijawab');
-                                }
-                            } else {
-                                row.push(userAns || 'Tidak Dijawab');
+                    ['copy', 'cut', 'paste'].forEach(evt => {
+                        document.addEventListener(evt, e => {
+                            if (this.view === 'exam') {
+                                e.preventDefault();
+                                alert("Dilarang Copy-Paste!");
                             }
                         });
-
-                        return row;
                     });
 
-                    // Combine Headers and Rows
-                    const excelData = [headers, ...dataRows];
+                    document.addEventListener('visibilitychange', () => {
+                        if (this.view === 'exam' && document.hidden) {
+                            this.handleViolation("Terdeteksi meninggalkan layar ujian (membuka aplikasi lain / Chrome)");
+                        }
+                    });
 
-                    // Create Worksheet and Workbook
-                    const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+                    window.addEventListener('blur', () => {
+                        if (this.view === 'exam') {
+                            this.handleViolation("Fokus layar ujian hilang!");
+                        }
+                    });
+                },
+
+                handleViolation(msg) {
+                    this.violations++;
+                    if (this.violations >= this.maxViolations) {
+                        alert("PELANGGARAN MAKSIMAL (3x)! Jawaban Anda otomatis dikumpulkan.");
+                        this.submitExam(true);
+                    } else {
+                        alert(`⚠️ PELANGGARAN (${this.violations}/${this.maxViolations})\n${msg}\nJangan berpindah dari aplikasi!`);
+                    }
+                },
+
+                submitExam(forced = false) {
+                    let score = 0;
+                    this.questions.forEach((q, idx) => {
+                        if (parseInt(this.studentAnswers[idx]) === q.correct) score++;
+                    });
+
+                    const finalScore = Math.round((score / this.questions.length) * 100);
+
+                    const record = {
+                        Nama: this.student.name,
+                        Kelas: this.student.class,
+                        No_Absen: this.student.absent,
+                        Benar: score,
+                        Total_Soal: this.questions.length,
+                        Nilai: finalScore,
+                        Pelanggaran: this.violations,
+                        Status: forced ? "Dihentikan Sistem" : "Selesai",
+                        Waktu: new Date().toLocaleString('id-ID')
+                    };
+
+                    this.results.push(record);
+                    localStorage.setItem('exam_results', JSON.stringify(this.results));
+
+                    alert(`Ujian Selesai!\nNilai: ${finalScore}`);
+
+                    this.student = { name: '', class: '', absent: '' };
+                    this.view = 'login';
+
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen().catch(() => {});
+                    }
+                },
+
+                addQuestion() {
+                    if (!this.newQ.text) return;
+                    this.questions.push(JSON.parse(JSON.stringify(this.newQ)));
+                    localStorage.setItem('exam_questions', JSON.stringify(this.questions));
+
+                    this.newQ.text = '';
+                    this.newQ.options = ['', '', '', ''];
+                    this.newQ.correct = 0;
+                    alert("Soal berhasil disimpan!");
+                },
+
+                deleteQuestion(index) {
+                    if (confirm("Hapus soal ini?")) {
+                        this.questions.splice(index, 1);
+                        localStorage.setItem('exam_questions', JSON.stringify(this.questions));
+                    }
+                },
+
+                exportToExcel() {
+                    if (this.results.length === 0) {
+                        alert("Belum ada data hasil ujian.");
+                        return;
+                    }
+
+                    const worksheet = XLSX.utils.json_to_sheet(this.results);
                     const workbook = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(workbook, worksheet, 'Hasil Ujian');
-
-                    // Save File
-                    const fileName = `Hasil_Ujian_Online_${new Date().toISOString().slice(0,10)}.xlsx`;
-                    XLSX.writeFile(workbook, fileName);
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Hasil Ujian");
+                    XLSX.writeFile(workbook, `Hasil_Ujian_${new Date().toISOString().slice(0,10)}.xlsx`);
                 }
             }
         }
